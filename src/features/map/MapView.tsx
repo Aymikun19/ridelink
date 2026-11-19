@@ -24,9 +24,19 @@ export interface MapViewProps {
 
 const DEFAULT_CENTER: LatLng = { lat: 6.5244, lng: 3.3792 };
 
-const tiles = {
-  dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-  light: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+/*
+ * Map tiles. Defaults to OpenStreetMap's free, keyless tiles (dark mode is a colour filter).
+ * For production traffic set VITE_TILE_URL (and optionally VITE_TILE_URL_DARK and
+ * VITE_TILE_ATTRIBUTION) to a provider such as MapTiler, Stadia Maps or Mapbox.
+ */
+const OSM_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const tileConfig = {
+  light: import.meta.env.VITE_TILE_URL || OSM_URL,
+  dark: import.meta.env.VITE_TILE_URL_DARK || import.meta.env.VITE_TILE_URL || OSM_URL,
+  attribution: import.meta.env.VITE_TILE_ATTRIBUTION || OSM_ATTRIBUTION,
+  // Only filter the default light tiles to fake a dark map; a real dark style needs no filter.
+  filterDark: !import.meta.env.VITE_TILE_URL_DARK,
 };
 
 function FitBounds({ points, fitKey }: { points: LatLng[]; fitKey?: string }) {
@@ -102,10 +112,10 @@ export function MapView({
       >
         <TileLayer
           key={theme}
-          url={tiles[theme]}
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          subdomains="abcd"
-          maxZoom={20}
+          url={tileConfig[theme]}
+          attribution={tileConfig.attribution}
+          className={theme === "dark" && tileConfig.filterDark ? "rl-tiles-dark" : undefined}
+          maxZoom={19}
         />
         <InvalidateOnResize />
         <FitBounds points={points} fitKey={computedKey} />

@@ -90,10 +90,11 @@ Location, microphone and notifications need `localhost` or HTTPS. To test both r
 | `APP_URL` | server | Public app URL, used for email links and CORS |
 | `VITE_GEOCODE_COUNTRIES` | browser, optional | Limit address search, e.g. `ng` |
 | `VITE_NOMINATIM_URL`, `VITE_OSRM_URL` | browser, optional | Self-hosted geocoding / routing |
+| `VITE_TILE_URL`, `VITE_TILE_URL_DARK`, `VITE_TILE_ATTRIBUTION` | browser, optional | Map tile provider (e.g. MapTiler or Stadia Maps with your key) |
 
 ## Maps and routing in production
 
-Address search uses OpenStreetMap Nominatim, routing uses the public OSRM server, and tiles come from CARTO. They are free and keyless, which is ideal for development and small pilots, but the public servers have fair-use limits (Nominatim allows about 1 request per second). For real traffic, point `VITE_NOMINATIM_URL` / `VITE_OSRM_URL` at your own instances or swap `src/lib/geo.ts` for a paid provider such as Mapbox or Google. If routing is unreachable the app falls back to straight-line distance instead of failing.
+Address search uses OpenStreetMap Nominatim, routing uses the public OSRM server, and map tiles come from OpenStreetMap (dark mode applies a colour filter). They are free and keyless, which is ideal for development and small pilots, but the public servers have fair-use limits (Nominatim allows about 1 request per second). For real traffic, point `VITE_NOMINATIM_URL` / `VITE_OSRM_URL` at your own instances or swap `src/lib/geo.ts` for a paid provider such as Mapbox or Google. If routing is unreachable the app falls back to straight-line distance instead of failing.
 
 ## Configuration
 
