@@ -54,7 +54,7 @@ Every table has row level security. Clients cannot update rides directly; all st
 
 ### 1. Supabase
 1. Create a project at supabase.com.
-2. Open **SQL Editor**, paste the contents of `supabase/migrations/0001_init.sql` and run it. It creates the tables, policies, functions, the private `voice-notes` bucket and enables realtime on `rides`, `messages` and `driver_status`.
+2. Open **SQL Editor** and run `supabase/migrations/0001_init.sql`, then `0002_harden_function_grants.sql`. It creates the tables, policies, functions, the private `voice-notes` bucket and enables realtime on `rides`, `messages` and `driver_status`.
 3. Copy the project URL, `anon` key and `service_role` key from **Project Settings > API**.
 
 You do not need to configure Supabase email templates: codes are sent by this app through Resend.
