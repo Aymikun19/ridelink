@@ -44,10 +44,12 @@ interface Props {
   role: Role;
   initial: ProfileFields;
   submitLabel: string;
+  /** Vehicle fields are edited on the driver documents page instead */
+  hideVehicle?: boolean;
   onSubmit: (fields: ProfileFields) => Promise<void>;
 }
 
-export function ProfileForm({ role, initial, submitLabel, onSubmit }: Props) {
+export function ProfileForm({ role, initial, submitLabel, hideVehicle, onSubmit }: Props) {
   const [f, setF] = useState(initial);
   const [saving, setSaving] = useState(false);
   const set = (k: keyof ProfileFields) => (e: React.ChangeEvent<HTMLInputElement>) => setF((s) => ({ ...s, [k]: e.target.value }));
@@ -63,6 +65,7 @@ export function ProfileForm({ role, initial, submitLabel, onSubmit }: Props) {
   };
 
   const driver = role === "driver";
+  const showVehicle = driver && !hideVehicle;
 
   return (
     <form onSubmit={submit} className="space-y-4">
@@ -79,7 +82,7 @@ export function ProfileForm({ role, initial, submitLabel, onSubmit }: Props) {
         hint={driver ? "Customers can call you during a ride." : "Your driver can call you during a ride."}
         required={driver}
       />
-      {driver && (
+      {showVehicle && (
         <div className="space-y-4 rounded-3xl border border-line p-4">
           <p className="flex items-center gap-2 text-sm font-semibold">
             <Car className="h-4 w-4 text-gold" /> Vehicle

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Link, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { ToastProvider } from "@/providers/ToastProvider";
@@ -18,7 +18,10 @@ import { HomeRouter } from "@/features/rides/HomeRouter";
 // Secondary screens are split into their own chunks.
 const RidePage = lazy(() => import("@/features/rides/RidePage").then((m) => ({ default: m.RidePage })));
 const HistoryPage = lazy(() => import("@/features/rides/HistoryPage").then((m) => ({ default: m.HistoryPage })));
-const TemplatesPage = lazy(() => import("@/features/chat/TemplatesPage").then((m) => ({ default: m.TemplatesPage })));
+const MessagesPage = lazy(() => import("@/features/chat/MessagesPage").then((m) => ({ default: m.MessagesPage })));
+const DriverDocumentsPage = lazy(() =>
+  import("@/features/driver/DriverDocumentsPage").then((m) => ({ default: m.DriverDocumentsPage })),
+);
 const ProfilePage = lazy(() => import("@/features/profile/ProfilePage").then((m) => ({ default: m.ProfilePage })));
 
 function NotFound() {
@@ -64,7 +67,9 @@ export default function App() {
                   <Route path="/app" element={<HomeRouter />} />
                   <Route path="/ride/:id" element={<RidePage />} />
                   <Route path="/history" element={<HistoryPage />} />
-                  <Route path="/templates" element={<TemplatesPage />} />
+                  <Route path="/messages" element={<MessagesPage />} />
+                  <Route path="/templates" element={<Navigate to="/messages?tab=replies" replace />} />
+                  <Route path="/driver/documents" element={<DriverDocumentsPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />

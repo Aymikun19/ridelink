@@ -13,6 +13,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useToast } from "@/providers/ToastProvider";
 import { useGeolocation, type GeoState } from "@/features/map/useGeolocation";
 import { acceptRide, declineRide, getActiveRide, nearbyRequests } from "@/features/rides/rideApi";
+import { getDriverDocuments } from "./documentsApi";
 import type { NearbyRequest, Ride } from "@/types";
 import { IncomingRequestModal } from "./IncomingRequestModal";
 
@@ -194,12 +195,13 @@ export function DriverProvider({ children }: { children: ReactNode }) {
         if (next) {
           unlockAudio();
           void ensureNotificationPermission();
-          if (!profile?.full_name || !profile?.plate_number) {
+          const docs = await getDriverDocuments(driverId);
+          if (!docs || !["submitted", "approved"].includes(docs.status)) {
             toast({
               tone: "error",
-              title: "Complete your profile first",
-              body: "Add your name and vehicle details so customers can recognise you.",
-              action: { label: "Open profile", onClick: () => navigate("/profile") },
+              title: "Finish your driver details first",
+              body: "Add your vehicle, photos and licence before going online.",
+              action: { label: "Open checklist", onClick: () => navigate("/driver/documents") },
             });
             return;
           }

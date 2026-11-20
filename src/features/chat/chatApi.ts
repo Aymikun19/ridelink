@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { VOICE_BUCKET } from "@/lib/config";
-import type { Message, MessageTemplate, Role } from "@/types";
+import type { Conversation, Message, MessageTemplate, Role } from "@/types";
 
 function extFor(mime: string) {
   if (mime.includes("webm")) return "webm";
@@ -78,6 +78,7 @@ export async function sendVoiceTemplate(rideId: string, senderId: string, templa
 
 export async function markRead(rideId: string) {
   await supabase.rpc("mark_messages_read", { p_ride: rideId });
+  announceMessagesChanged();
 }
 
 const urlCache = new Map<string, { url: string; expires: number }>();
@@ -152,4 +153,18 @@ export async function deleteTemplate(t: MessageTemplate) {
   const { error } = await supabase.from("message_templates").delete().eq("id", t.id);
   if (error) throw error;
   if (t.audio_path) await supabase.storage.from(VOICE_BUCKET).remove([t.audio_path]);
+}
+
+/* ---------------- Inbox ---------------- */
+
+export async function listConversations() {
+  const { data, error } = await supabase.rpc("my_conversations");
+  if (error) throw error;
+  return (data ?? []) as Conversation[];
+}
+
+/** Fired when messages arrive or are read, so the unread badge refreshes. */
+export const MESSAGES_CHANGED = "rl:messages-changed";
+export function announceMessagesChanged() {
+  window.dispatchEvent(new Event(MESSAGES_CHANGED));
 }

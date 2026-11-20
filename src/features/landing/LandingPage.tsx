@@ -34,9 +34,9 @@ const steps = {
     "Track your driver and chat until you arrive",
   ],
   driver: [
-    "Add your vehicle and go online",
-    "Accept requests from the popup or the open list",
-    "Navigate, update status and complete the trip",
+    "Add your vehicle, photo, licence and registration",
+    "Go online and get request alerts nearby",
+    "Accept, navigate and complete the trip; riders pay you directly",
   ],
 };
 

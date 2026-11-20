@@ -5,7 +5,7 @@ import { formatTime } from "@/lib/format";
 import { readableError } from "@/lib/supabase";
 import { useToast } from "@/providers/ToastProvider";
 import { Spinner } from "@/components/ui/Spinner";
-import type { MessageTemplate, Profile } from "@/types";
+import type { MessageTemplate, Profile, RideStatus } from "@/types";
 import { sendText, sendVoice, sendVoiceTemplate } from "./chatApi";
 import type { useMessages } from "./useMessages";
 import { useRecorder } from "./useRecorder";
@@ -20,10 +20,11 @@ interface Props {
   counterpart: Profile | null;
   /** Read-only once the ride is over */
   readOnly?: boolean;
+  rideStatus?: RideStatus;
   className?: string;
 }
 
-export function ChatPanel({ chat, rideId, me, counterpart, readOnly, className }: Props) {
+export function ChatPanel({ chat, rideId, me, counterpart, readOnly, rideStatus, className }: Props) {
   const toast = useToast();
   const { messages, loading, upsert } = chat;
   const [text, setText] = useState("");
@@ -117,7 +118,7 @@ export function ChatPanel({ chat, rideId, me, counterpart, readOnly, className }
 
       {!readOnly && (
         <div className="space-y-2 border-t border-line pt-3">
-          {recorder.state === "idle" && <TemplateChips onPick={pickTemplate} disabled={sending} />}
+          {recorder.state === "idle" && <TemplateChips onPick={pickTemplate} disabled={sending} rideStatus={rideStatus} />}
           {recorder.state === "idle" ? (
             <form onSubmit={submit} className="flex items-center gap-2">
               <input

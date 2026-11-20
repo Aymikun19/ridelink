@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { ArrowLeft, Car, Check, UserRound } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useToast } from "@/providers/ToastProvider";
@@ -17,11 +17,12 @@ const options: { role: Role; title: string; body: string; icon: typeof Car }[] =
 export function OnboardingPage() {
   const { profile, updateProfile } = useAuth();
   const toast = useToast();
-  const navigate = useNavigate();
   const [role, setRole] = useState<Role | null>(null);
   const [step, setStep] = useState<"role" | "details">("role");
+  const [finishedRole, setFinishedRole] = useState<Role | null>(null);
 
-  if (profile?.role) return <Navigate to="/app" replace />;
+  // Right after finishing, drivers continue to their vehicle and documents checklist.
+  if (profile?.role) return <Navigate to={finishedRole === "driver" ? "/driver/documents" : "/app"} replace />;
 
   return (
     <div className="relative flex min-h-full flex-col bg-grid">
@@ -78,7 +79,7 @@ export function OnboardingPage() {
                 {role === "driver" ? "Your driver details" : "Your details"}
               </h1>
               <p className="mb-8 mt-2 text-muted">
-                {role === "driver" ? "Customers see your name, vehicle and plate when you accept their ride." : "Your driver sees your first name."}
+                {role === "driver" ? "Next you will add your vehicle photo, licence and registration, like on other ride-hailing apps. No bank details needed." : "Your driver sees your first name."}
               </p>
               <ProfileForm
                 role={role}
@@ -86,8 +87,8 @@ export function OnboardingPage() {
                 submitLabel="Finish setup"
                 onSubmit={async (f) => {
                   try {
+                    setFinishedRole(role);
                     await updateProfile({ ...cleanFields(f, role), role });
-                    navigate("/app", { replace: true });
                   } catch (err) {
                     toast({ tone: "error", title: "Could not save", body: readableError(err) });
                   }

@@ -1,3 +1,4 @@
+import { LogoLoader } from "./LogoLoader";
 import { cn } from "@/lib/cn";
 
 export function Spinner({ className }: { className?: string }) {
@@ -10,10 +11,5 @@ export function Spinner({ className }: { className?: string }) {
 }
 
 export function FullPageSpinner({ label }: { label?: string }) {
-  return (
-    <div className="flex min-h-full flex-1 flex-col items-center justify-center gap-3 py-24 text-muted">
-      <Spinner className="h-7 w-7" />
-      {label && <p className="text-sm">{label}</p>}
-    </div>
-  );
+  return <LogoLoader label={label} className="min-h-full flex-1 py-24" />;
 }

@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { Camera, KeyRound, LogOut, Mail, MapPin, Trash2 } from "lucide-react";
+import { Car, ChevronRight, KeyRound, LogOut, Mail, MapPin, Trash2 } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useToast } from "@/providers/ToastProvider";
 import { readableError, supabase } from "@/lib/supabase";
 import { passwordProblem } from "@/lib/password";
-import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, SectionTitle } from "@/components/ui/Card";
@@ -15,72 +14,17 @@ import { PasswordField } from "@/features/auth/components/PasswordField";
 import { deleteSavedPlace, listSavedPlaces } from "@/features/places/placesApi";
 import type { SavedPlace } from "@/types";
 import { ProfileForm, cleanFields, toFields } from "./ProfileForm";
-
-const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
-
-/** Downscales to at most 512 px on the long side and re-encodes as JPEG. */
-async function resizeImage(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, 512 / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  return new Promise((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Could not process the image"))), "image/jpeg", 0.85),
-  );
-}
+import { ProfilePhoto } from "./ProfilePhoto";
 
 export function ProfilePage() {
   const { profile, updateProfile, signOut } = useAuth();
   const toast = useToast();
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-
   if (!profile?.role) return null;
-
-  const onPhoto = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast({ tone: "error", title: "Choose an image file" });
-      return;
-    }
-    setUploading(true);
-    try {
-      const blob = await resizeImage(file);
-      if (blob.size > MAX_PHOTO_BYTES) throw new Error("That image is too large. Try a smaller one.");
-      const path = `${profile.id}/${Date.now()}.jpg`;
-      const { error } = await supabase.storage.from("avatars").upload(path, blob, { contentType: "image/jpeg" });
-      if (error) throw error;
-      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-      const old = profile.avatar_url?.split("/avatars/")[1];
-      await updateProfile({ avatar_url: data.publicUrl });
-      if (old) void supabase.storage.from("avatars").remove([old]);
-      toast({ tone: "success", title: "Photo updated" });
-    } catch (err) {
-      toast({ tone: "error", title: "Could not update photo", body: readableError(err) });
-    } finally {
-      setUploading(false);
-    }
-  };
 
   return (
     <div className="mx-auto w-full max-w-xl space-y-10 px-4 py-8 sm:px-6">
       <Card className="flex items-center gap-4 p-5">
-        <div className="relative">
-          <Avatar name={profile.full_name} src={profile.avatar_url} className="h-16 w-16 text-lg" />
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-surface bg-gold text-[#0b0b0b] transition hover:scale-105"
-            aria-label="Change photo"
-          >
-            {uploading ? <Spinner className="h-3.5 w-3.5" /> : <Camera className="h-3.5 w-3.5" />}
-          </button>
-          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={onPhoto} />
-        </div>
+        <ProfilePhoto />
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-xl font-bold">{profile.full_name || "Your profile"}</p>
           <p className="flex items-center gap-1.5 truncate text-sm text-muted">
@@ -88,14 +32,32 @@ export function ProfilePage() {
           </p>
           <p className="mt-1 text-xs text-subtle">Member since {formatDateTime(profile.created_at)}</p>
         </div>
-        <Badge tone="gold">{profile.role === "driver" ? "Driver" : "Customer"}</Badge>
+        <Badge tone={profile.driver_verified ? "success" : "gold"}>
+          {profile.role === "driver" ? (profile.driver_verified ? "Verified driver" : "Driver") : "Customer"}
+        </Badge>
       </Card>
+
+      {profile.role === "driver" && (
+        <Link to="/driver/documents" className="block">
+          <Card className="flex items-center gap-4 p-5 transition hover:border-gold/50">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-line text-gold">
+              <Car className="h-5 w-5" />
+            </span>
+            <div className="flex-1">
+              <p className="font-semibold">Vehicle and documents</p>
+              <p className="text-sm text-muted">Vehicle type, photo, licence and registration</p>
+            </div>
+            <ChevronRight className="h-5 w-5 text-subtle" />
+          </Card>
+        </Link>
+      )}
 
       <section>
         <SectionTitle title="Edit details" />
         <ProfileForm
           key={profile.updated_at}
           role={profile.role}
+          hideVehicle
           initial={toFields(profile)}
           submitLabel="Save changes"
           onSubmit={async (f) => {

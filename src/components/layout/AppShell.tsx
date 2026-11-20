@@ -1,5 +1,8 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { History, Home, MessageSquareText, Moon, Sun, UserRound } from "lucide-react";
+import { History, Home, MessagesSquare, Moon, Sun, UserRound } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Avatar } from "@/components/ui/Avatar";
+import { useUnreadCount } from "@/features/chat/useUnreadCount";
 import { useAuth } from "@/providers/AuthProvider";
 import { useTheme } from "@/providers/ThemeProvider";
 import { Logo } from "@/components/ui/Logo";
@@ -10,7 +13,7 @@ import { GlobalAlerts } from "./GlobalAlerts";
 const nav = [
   { to: "/app", label: "Home", icon: Home },
   { to: "/history", label: "Trips", icon: History },
-  { to: "/templates", label: "Templates", icon: MessageSquareText },
+  { to: "/messages", label: "Messages", icon: MessagesSquare },
   { to: "/profile", label: "Profile", icon: UserRound },
 ];
 
@@ -30,8 +33,19 @@ function OnlinePill() {
   );
 }
 
+function UnreadDot({ count, className }: { count: number; className?: string }) {
+  if (!count) return null;
+  return (
+    <span className={cn("flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-gold px-1 text-[10px] font-bold leading-none text-[#0b0b0b]", className)}>
+      {count > 9 ? "9+" : count}
+    </span>
+  );
+}
+
 function Shell() {
   const { theme, toggle } = useTheme();
+  const { profile } = useAuth();
+  const unread = useUnreadCount();
   return (
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-[700] h-16 border-b border-line bg-bg/85 backdrop-blur-xl">
@@ -45,11 +59,13 @@ function Shell() {
                 className={({ isActive }) =>
                   cn(
                     "rounded-full px-4 py-2 text-sm font-medium transition",
+                    "inline-flex items-center gap-2",
                     isActive ? "bg-fg/10 text-fg" : "text-muted hover:text-fg",
                   )
                 }
               >
                 {n.label}
+                {n.to === "/messages" && <UnreadDot count={unread} />}
               </NavLink>
             ))}
           </nav>
@@ -62,6 +78,9 @@ function Shell() {
             >
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
+            <Link to="/profile" aria-label="Your profile" className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60">
+              <Avatar name={profile?.full_name} src={profile?.avatar_url} className="h-9 w-9 text-xs" />
+            </Link>
           </div>
         </div>
       </header>
@@ -79,7 +98,10 @@ function Shell() {
               cn("flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium", isActive ? "text-gold" : "text-muted")
             }
           >
-            <n.icon className="h-5 w-5" />
+            <span className="relative">
+              <n.icon className="h-5 w-5" />
+              {n.to === "/messages" && <UnreadDot count={unread} className="absolute -right-2.5 -top-1.5" />}
+            </span>
             {n.label}
           </NavLink>
         ))}

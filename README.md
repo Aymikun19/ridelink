@@ -12,10 +12,11 @@ A modular ride-hailing app for customers and drivers, without a payment gateway 
 | Roles | Customer or driver, chosen once at onboarding. Drivers add vehicle and plate. |
 | Booking | Pickup from GPS, address search or a tap on the map. Route preview with distance and time. Optional note for the driver. Saved places (Home, Work, ...) for one-tap drop-off. |
 | Map | Street map (OpenStreetMap) or satellite imagery (Esri) with road and place labels, zoom and recentre controls; the choice is remembered per device. |
+| Driver details | Like other ride-hailing apps, drivers add vehicle type, make, model, colour, year, seats, plate, a vehicle photo and a profile photo, plus driver's licence (number, expiry, photo) and vehicle registration (number, document), with optional insurance. Documents live in a private bucket. Drivers can go online once submitted; you approve them (see below) to show a Verified badge. No bank or payment details. |
 | Driver alerts | Online/offline toggle. New requests within 15 km open a popup with a 30 s countdown, a chime, vibration and a system notification when the tab is in the background. An open-requests list is also shown. |
 | Live trip | Status flow: requested, accepted, arrived, on trip, completed. Customer sees the driver's car move on the map with a live ETA. Driver gets a one-tap Google Maps navigation link. |
-| Messaging | Per-ride chat with read receipts, voice notes (record, preview, send), and one-tap quick replies. |
-| Templates | Users create their own text templates and record reusable voice-note templates. Built-in quick replies ship per role. |
+| Messaging | Messages inbox of all ride chats with unread badges. Per-ride chat with read receipts, voice notes, and suggested replies ordered by trip stage. |
+| Quick replies | Create text or voice replies from inside a chat (+ New) or under Messages > Quick replies. Built-in suggestions ship per role. |
 | Popups | In-app toasts for new messages and ride status changes anywhere in the app, plus browser notifications. |
 | Email | Customer gets an email when a driver accepts, arrives and completes. |
 | Other | Profile photos, change password, installable app (add to home screen), error screen with reload, cancel with reasons (a driver cancelling puts the ride back in the pool), rating and feedback, trip history with filters, profile editing, light and dark themes, mobile layout with bottom navigation. |
@@ -47,6 +48,10 @@ src/
     landing/                 Public landing page
 ```
 
+## Approving drivers
+
+Drivers who submit complete documents can go online straight away with the status *Submitted*. To review them, open the Supabase dashboard: **Storage > driver-docs** holds each driver's files in a folder named after their user id, and **Table Editor > driver_documents** holds the details. Set `status` to `approved` to give the driver a Verified badge, or to `rejected` with a `review_note` explaining what to fix. Drivers cannot change these fields themselves, and changing their licence or registration sends them back for review.
+
 ## Security model
 
 Every table has row level security. Clients cannot update rides directly; all state changes go through `security definer` Postgres functions that check who is calling and enforce valid transitions (`accept_ride`, `advance_ride`, `cancel_ride`, `rate_ride`, `decline_ride`). Accepting is atomic, so two drivers cannot take the same ride. Unique partial indexes allow only one active ride per customer and per driver. Messages and voice notes are only readable by the two people on that ride; voice templates only by their owner. The service role key is only used on the server.
@@ -55,7 +60,7 @@ Every table has row level security. Clients cannot update rides directly; all st
 
 ### 1. Supabase
 1. Create a project at supabase.com.
-2. Open **SQL Editor** and run the files in `supabase/migrations/` in order (`0001`, `0002`, `0003`). It creates the tables, policies, functions, the private `voice-notes` bucket and enables realtime on `rides`, `messages` and `driver_status`.
+2. Open **SQL Editor** and run the files in `supabase/migrations/` in order (`0001` to `0004`). It creates the tables, policies, functions, the private `voice-notes` bucket and enables realtime on `rides`, `messages` and `driver_status`.
 3. Copy the project URL, `anon` key and `service_role` key from **Project Settings > API**.
 
 You do not need to configure Supabase email templates: codes are sent by this app through Resend.

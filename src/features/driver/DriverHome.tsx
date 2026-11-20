@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Flag, LocateFixed, MapPin, Power, Radar, RefreshCw, Wifi, WifiOff } from "lucide-react";
+import { ShieldCheck, ArrowRight, Flag, LocateFixed, MapPin, Power, Radar, RefreshCw, Wifi, WifiOff } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -13,6 +13,8 @@ import { cn } from "@/lib/cn";
 import { countCompletedSince } from "@/features/rides/rideApi";
 import { statusMeta } from "@/features/rides/status";
 import { useDriver } from "./DriverProvider";
+import { getDriverDocuments } from "./documentsApi";
+import type { DocumentStatus } from "@/types";
 
 export function DriverHome() {
   const { profile } = useAuth();
@@ -31,7 +33,13 @@ export function DriverHome() {
 
   const pins = useMemo(() => requests.map((r) => ({ id: r.id, lat: r.pickup_lat, lng: r.pickup_lng })), [requests]);
 
-  const profileIncomplete = !profile?.full_name || !profile?.plate_number;
+  const [docStatus, setDocStatus] = useState<DocumentStatus | null>(null);
+  useEffect(() => {
+    if (!profile) return;
+    getDriverDocuments(profile.id)
+      .then((d) => setDocStatus(d?.status ?? "incomplete"))
+      .catch(() => setDocStatus(null));
+  }, [profile]);
 
   return (
     <div className="flex flex-1 flex-col lg:flex-row">
@@ -50,14 +58,26 @@ export function DriverHome() {
           {profile?.full_name ? `Hello, ${firstName(profile.full_name)}` : "Driver dashboard"}
         </h1>
 
-        {profileIncomplete && (
+        {(docStatus === "incomplete" || docStatus === "rejected") && (
           <Card className="mt-5 border-gold/40 bg-gold/5 p-4">
-            <p className="text-sm font-semibold">Finish your driver profile</p>
-            <p className="mt-1 text-sm text-muted">Customers need your name and plate number to find you.</p>
-            <Link to="/profile" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-gold hover:underline">
-              Complete profile <ArrowRight className="h-4 w-4" />
+            <p className="text-sm font-semibold">{docStatus === "rejected" ? "Your documents need changes" : "Finish your driver details"}</p>
+            <p className="mt-1 text-sm text-muted">
+              Add your vehicle, photos and licence to start receiving rides.
+            </p>
+            <Link to="/driver/documents" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-gold hover:underline">
+              Open checklist <ArrowRight className="h-4 w-4" />
             </Link>
           </Card>
+        )}
+        {docStatus === "submitted" && (
+          <p className="mt-4 flex items-center gap-2 text-sm text-muted">
+            <ShieldCheck className="h-4 w-4 text-gold" /> Documents submitted and waiting for review.
+          </p>
+        )}
+        {docStatus === "approved" && (
+          <p className="mt-4 flex items-center gap-2 text-sm text-success">
+            <ShieldCheck className="h-4 w-4" /> Verified driver
+          </p>
         )}
 
         {activeRide ? (

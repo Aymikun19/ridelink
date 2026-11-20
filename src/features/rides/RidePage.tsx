@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   Car,
@@ -12,6 +12,7 @@ import {
   Navigation,
   Phone,
   Play,
+  ShieldCheck,
   StickyNote,
   XCircle,
 } from "lucide-react";
@@ -31,7 +32,7 @@ import { MapView } from "@/features/map/MapView";
 import { ChatPanel } from "@/features/chat/ChatPanel";
 import { useMessages } from "@/features/chat/useMessages";
 import { useOptionalDriver } from "@/features/driver/DriverProvider";
-import type { Profile, Ride } from "@/types";
+import { vehicleTypeLabel, type Profile, type Ride } from "@/types";
 import { advanceRide, cancelRide } from "./rideApi";
 import { RateRide } from "./RateRide";
 import { StatusTimeline } from "./StatusTimeline";
@@ -50,7 +51,8 @@ export function RidePage() {
   const driverCtx = useOptionalDriver();
   const { ride, setRide, counterpart, driverStatus, loading, error } = useRide(id, profile?.id);
 
-  const [tab, setTab] = useState<Tab>("trip");
+  const location = useLocation();
+  const [tab, setTab] = useState<Tab>((location.state as { openChat?: boolean } | null)?.openChat ? "chat" : "trip");
   const [busy, setBusy] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [route, setRoute] = useState<RouteInfo | null>(null);
@@ -218,6 +220,7 @@ export function RidePage() {
             me={profile}
             counterpart={counterpart}
             readOnly={ended}
+            rideStatus={ride.status}
             className="h-[55vh] px-5 pb-5 sm:px-6 lg:h-auto lg:flex-1"
           />
         ) : (
@@ -425,14 +428,29 @@ function CounterpartCard({
   showContact: boolean;
 }) {
   const vehicle = [person.vehicle_color, person.vehicle_make, person.vehicle_model].filter(Boolean).join(" ");
+  const vehicleMeta = [vehicleTypeLabel(person.vehicle_type), person.vehicle_year, person.vehicle_seats ? `${person.vehicle_seats} seats` : null]
+    .filter(Boolean)
+    .join(" · ");
   return (
-    <Card className="p-4">
+    <Card className="overflow-hidden p-0">
+      {!isDriverView && person.vehicle_photo_url && (
+        <img src={person.vehicle_photo_url} alt={`${vehicle || "Driver's vehicle"}`} className="h-36 w-full object-cover" />
+      )}
+      <div className="p-4">
       <div className="flex items-center gap-3">
         <Avatar name={person.full_name} src={person.avatar_url} className="h-12 w-12" />
         <div className="min-w-0 flex-1">
           <p className="text-xs text-subtle">{isDriverView ? "Customer" : "Your driver"}</p>
-          <p className="truncate font-semibold">{person.full_name || "Name not set"}</p>
+          <p className="flex items-center gap-1.5 truncate font-semibold">
+            {person.full_name || "Name not set"}
+            {!isDriverView && person.driver_verified && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[11px] font-semibold text-success">
+                <ShieldCheck className="h-3 w-3" /> Verified
+              </span>
+            )}
+          </p>
           {!isDriverView && vehicle && <p className="truncate text-sm text-muted">{vehicle}</p>}
+          {!isDriverView && vehicleMeta && <p className="truncate text-xs text-subtle">{vehicleMeta}</p>}
         </div>
         {!isDriverView && person.plate_number && (
           <span className="rounded-xl border-2 border-fg/80 bg-fg px-2.5 py-1 font-mono text-sm font-bold tracking-wider text-bg">
@@ -458,6 +476,7 @@ function CounterpartCard({
           )}
         </div>
       )}
+      </div>
     </Card>
   );
 }

@@ -24,7 +24,8 @@ import { VoiceRecorderBar } from "./VoiceRecorderBar";
 
 type Editor = { mode: "text"; template?: MessageTemplate } | { mode: "voice" } | null;
 
-export function TemplatesPage() {
+/** Manage quick replies (text) and voice templates. Shown as the "Quick replies" tab in Messages. */
+export function QuickRepliesManager() {
   const { profile } = useAuth();
   const toast = useToast();
   const [templates, setTemplates] = useState<MessageTemplate[] | null>(null);
@@ -70,36 +71,32 @@ export function TemplatesPage() {
       return [...list, t];
     });
     setEditor(null);
-    toast({ tone: "success", title: "Template saved" });
+    toast({ tone: "success", title: "Quick reply saved" });
   };
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
+    <div>
       <div className="mb-8">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-gold">Messaging</p>
-        <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
-          Quick replies <span className="font-serif font-normal italic text-gold">and</span> voice templates
-        </h1>
-        <p className="mt-3 max-w-xl text-muted">
-          Save messages you send often. They appear as one-tap chips in every ride chat. Voice templates let you record a note
-          once and reuse it.
+        <p className="max-w-xl text-sm text-muted">
+          Quick replies show up as suggestions in every ride chat. Record a voice reply once and send it with one tap, which helps
+          when you are driving.
         </p>
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="mt-5 flex flex-wrap gap-3">
           <Button icon={<Type className="h-4 w-4" />} onClick={() => setEditor({ mode: "text" })}>
-            New text template
+            New text reply
           </Button>
           <Button variant="secondary" icon={<Mic className="h-4 w-4" />} onClick={() => setEditor({ mode: "voice" })}>
-            Record voice template
+            Record voice reply
           </Button>
         </div>
       </div>
 
       <section className="mb-10">
-        <SectionTitle eyebrow="Yours" title="Your templates" />
+        <SectionTitle eyebrow="Yours" title="Your quick replies" />
         {mine.length === 0 ? (
           <EmptyState
             icon={<Plus className="h-5 w-5" />}
-            title="No custom templates yet"
+            title="No quick replies of your own yet"
             body="Create a text reply or record a voice note to reuse during rides."
           />
         ) : (
@@ -137,7 +134,7 @@ export function TemplatesPage() {
 
       {builtIn.length > 0 && (
         <section>
-          <SectionTitle eyebrow="Included" title="Built-in quick replies" />
+          <SectionTitle eyebrow="Included" title="Built-in suggestions" />
           <div className="grid gap-3">
             {builtIn.map((t) => (
               <TemplateRow key={t.id} t={t} actions={<Lock className="mr-2 h-4 w-4 text-subtle" aria-label="Built-in" />} />
@@ -194,7 +191,7 @@ function TemplateRow({ t, actions }: { t: MessageTemplate; actions: React.ReactN
   );
 }
 
-function TextTemplateEditor({
+export function TextTemplateEditor({
   template,
   onClose,
   onSave,
@@ -222,7 +219,7 @@ function TextTemplateEditor({
   };
 
   return (
-    <Modal open onClose={onClose} title={template ? "Edit text template" : "New text template"}>
+    <Modal open onClose={onClose} title={template ? "Edit quick reply" : "New quick reply"}>
       <form onSubmit={submit} className="space-y-4">
         <Input label="Chip label" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={60} placeholder="At the gate" required autoFocus />
         <Textarea
@@ -242,7 +239,7 @@ function TextTemplateEditor({
   );
 }
 
-function VoiceTemplateEditor({
+export function VoiceTemplateEditor({
   onClose,
   onSave,
 }: {
@@ -276,7 +273,7 @@ function VoiceTemplateEditor({
         recorder.reset();
         onClose();
       }}
-      title="Record voice template"
+      title="Record a voice reply"
     >
       <div className="space-y-5">
         <Input label="Chip label" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={60} placeholder="Directions to my gate" autoFocus />

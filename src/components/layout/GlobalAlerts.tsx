@@ -6,6 +6,7 @@ import { systemNotify } from "@/lib/browserNotify";
 import { useAuth } from "@/providers/AuthProvider";
 import { useToast } from "@/providers/ToastProvider";
 import type { Message, Ride } from "@/types";
+import { announceMessagesChanged } from "@/features/chat/chatApi";
 
 const customerCopy: Partial<Record<Ride["status"], { title: string; body: string }>> = {
   accepted: { title: "Driver found", body: "A driver accepted your ride and is on the way." },
@@ -35,6 +36,7 @@ export function GlobalAlerts() {
       .channel(`alerts-${me}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (p) => {
         const m = p.new as Message;
+        announceMessagesChanged();
         if (m.sender_id === me) return;
         const onRide = pathRef.current === `/ride/${m.ride_id}`;
         playPing();
