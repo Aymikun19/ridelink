@@ -19,11 +19,11 @@ import { Logo } from "@/components/ui/Logo";
 import { APP_NAME } from "@/lib/config";
 
 const features = [
-  { icon: MapPinned, title: "Live map tracking", body: "Watch your driver move toward you in real time, with route and arrival estimate." },
+  { icon: MapPinned, title: "Live map and satellite view", body: "Watch your driver move toward you in real time on a street map or satellite imagery, with route and arrival estimate." },
   { icon: BellRing, title: "Instant request alerts", body: "Drivers get a popup, a chime and a system notification the moment a ride is requested nearby." },
   { icon: MessageSquareText, title: "In-ride messaging", body: "Chat inside every trip with read receipts. No need to share numbers if you do not want to." },
   { icon: AudioLines, title: "Voice notes", body: "Hold a quick voice conversation when typing is not practical, like while driving." },
-  { icon: KeyRound, title: "Passwordless sign in", body: "A 6 digit code lands in your email. Nothing to remember, nothing to leak." },
+  { icon: KeyRound, title: "Secure accounts", body: "Sign up with a password confirmed by email, or log in with a one-time code. Forgotten passwords are reset with an emailed code." },
   { icon: Navigation, title: "Reusable templates", body: "Save the replies and voice notes you send most, then send them with one tap." },
 ];
 
@@ -94,8 +94,11 @@ export function LandingPage() {
             >
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
-            <Link to="/login" className="rounded-full bg-fg px-5 py-2 text-sm font-semibold text-bg hover:opacity-90">
-              Sign in
+            <Link to="/login" className="hidden rounded-full px-4 py-2 text-sm font-semibold text-muted hover:text-fg sm:inline-flex">
+              Log in
+            </Link>
+            <Link to="/signup" className="rounded-full bg-fg px-5 py-2 text-sm font-semibold text-bg hover:opacity-90">
+              Sign up
             </Link>
           </div>
         </div>
@@ -118,13 +121,13 @@ export function LandingPage() {
             </p>
             <div className="mt-10 flex flex-col gap-3 sm:flex-row">
               <Link
-                to="/login"
+                to="/signup"
                 className="inline-flex h-13 items-center justify-center gap-2 rounded-full bg-fg px-7 font-semibold text-bg transition hover:opacity-90"
               >
                 Book a ride <ArrowRight className="h-5 w-5" />
               </Link>
               <Link
-                to="/login"
+                to="/signup"
                 className="inline-flex h-13 items-center justify-center gap-2 rounded-full border border-line bg-fg/5 px-7 font-semibold transition hover:bg-fg/10"
               >
                 Drive with us <ArrowUpRight className="h-5 w-5" />
@@ -196,9 +199,9 @@ export function LandingPage() {
           <h2 className="font-display text-4xl font-extrabold tracking-tight sm:text-5xl">
             Ready when <span className="font-serif font-normal italic text-gold">you are.</span>
           </h2>
-          <p className="mx-auto mt-4 max-w-lg text-muted">Sign in with your email to request your first ride or start driving.</p>
+          <p className="mx-auto mt-4 max-w-lg text-muted">Create a free account to request your first ride or start driving.</p>
           <Link
-            to="/login"
+            to="/signup"
             className="mt-10 inline-flex h-13 items-center justify-center gap-2 rounded-full bg-fg px-8 font-semibold text-bg transition hover:opacity-90"
           >
             Get started <ArrowRight className="h-5 w-5" />

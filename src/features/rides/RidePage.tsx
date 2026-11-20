@@ -428,7 +428,7 @@ function CounterpartCard({
   return (
     <Card className="p-4">
       <div className="flex items-center gap-3">
-        <Avatar name={person.full_name} className="h-12 w-12" />
+        <Avatar name={person.full_name} src={person.avatar_url} className="h-12 w-12" />
         <div className="min-w-0 flex-1">
           <p className="text-xs text-subtle">{isDriverView ? "Customer" : "Your driver"}</p>
           <p className="truncate font-semibold">{person.full_name || "Name not set"}</p>

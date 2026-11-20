@@ -5,6 +5,8 @@ import { useTheme } from "@/providers/ThemeProvider";
 import { cn } from "@/lib/cn";
 import type { LatLng } from "@/lib/geo";
 import { carIcon, dropoffIcon, meIcon, pickupIcon } from "./markers";
+import { MapControls } from "./MapControls";
+import { tiles, useMapStyle } from "./mapStyle";
 
 export interface MapViewProps {
   pickup?: LatLng | null;
@@ -23,21 +25,6 @@ export interface MapViewProps {
 }
 
 const DEFAULT_CENTER: LatLng = { lat: 6.5244, lng: 3.3792 };
-
-/*
- * Map tiles. Defaults to OpenStreetMap's free, keyless tiles (dark mode is a colour filter).
- * For production traffic set VITE_TILE_URL (and optionally VITE_TILE_URL_DARK and
- * VITE_TILE_ATTRIBUTION) to a provider such as MapTiler, Stadia Maps or Mapbox.
- */
-const OSM_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
-const tileConfig = {
-  light: import.meta.env.VITE_TILE_URL || OSM_URL,
-  dark: import.meta.env.VITE_TILE_URL_DARK || import.meta.env.VITE_TILE_URL || OSM_URL,
-  attribution: import.meta.env.VITE_TILE_ATTRIBUTION || OSM_ATTRIBUTION,
-  // Only filter the default light tiles to fake a dark map; a real dark style needs no filter.
-  filterDark: !import.meta.env.VITE_TILE_URL_DARK,
-};
 
 function FitBounds({ points, fitKey }: { points: LatLng[]; fitKey?: string }) {
   const map = useMap();
@@ -83,6 +70,7 @@ export function MapView({
   fallbackCenter,
 }: MapViewProps) {
   const { theme } = useTheme();
+  const style = useMapStyle();
 
   const points = useMemo(() => {
     const list: LatLng[] = [];
@@ -110,19 +98,29 @@ export function MapView({
         className="h-full w-full"
         attributionControl
       >
-        <TileLayer
-          key={theme}
-          url={tileConfig[theme]}
-          attribution={tileConfig.attribution}
-          className={theme === "dark" && tileConfig.filterDark ? "rl-tiles-dark" : undefined}
-          maxZoom={19}
-        />
+        {style === "satellite" ? (
+          <>
+            <TileLayer key="sat" url={tiles.satellite.url} attribution={tiles.satellite.attribution} maxZoom={tiles.satellite.maxZoom} />
+            {tiles.satellite.labels.map((url) => (
+              <TileLayer key={url} url={url} maxZoom={tiles.satellite.maxZoom} />
+            ))}
+          </>
+        ) : (
+          <TileLayer
+            key={`streets-${theme}`}
+            url={tiles.streets[theme]}
+            attribution={tiles.streets.attribution}
+            className={theme === "dark" && tiles.streets.filterDark ? "rl-tiles-dark" : undefined}
+            maxZoom={tiles.streets.maxZoom}
+          />
+        )}
+        <MapControls points={points} me={me} />
         <InvalidateOnResize />
         <FitBounds points={points} fitKey={computedKey} />
         {onMapClick && <ClickHandler onClick={onMapClick} />}
         {route && route.length > 1 && (
           <>
-            <Polyline positions={route} pathOptions={{ color: "#0b0b0b", weight: 8, opacity: theme === "dark" ? 0.6 : 0.15 }} />
+            <Polyline positions={route} pathOptions={{ color: "#0b0b0b", weight: 8, opacity: theme === "dark" || style === "satellite" ? 0.6 : 0.15 }} />
             <Polyline positions={route} pathOptions={{ color: "#c9a84c", weight: 4.5, opacity: 0.95 }} />
           </>
         )}

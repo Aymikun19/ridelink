@@ -4,11 +4,14 @@ import { AuthProvider } from "@/providers/AuthProvider";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { ToastProvider } from "@/providers/ToastProvider";
 import { AppShell } from "@/components/layout/AppShell";
+import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
 import { RequireAuth } from "@/components/layout/guards";
 import { FullPageSpinner } from "@/components/ui/Spinner";
 import { Button } from "@/components/ui/Button";
 import { LandingPage } from "@/features/landing/LandingPage";
 import { LoginPage } from "@/features/auth/LoginPage";
+import { SignupPage } from "@/features/auth/SignupPage";
+import { ForgotPasswordPage } from "@/features/auth/ForgotPasswordPage";
 import { OnboardingPage } from "@/features/auth/OnboardingPage";
 import { HomeRouter } from "@/features/rides/HomeRouter";
 
@@ -36,10 +39,13 @@ export default function App() {
       <BrowserRouter>
         <ToastProvider>
           <AuthProvider>
+            <ErrorBoundary>
             <Suspense fallback={<FullPageSpinner />}>
               <Routes>
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route
                   path="/onboarding"
                   element={
@@ -64,6 +70,7 @@ export default function App() {
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
+            </ErrorBoundary>
           </AuthProvider>
         </ToastProvider>
       </BrowserRouter>

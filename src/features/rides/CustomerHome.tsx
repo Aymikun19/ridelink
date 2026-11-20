@@ -16,6 +16,7 @@ import { useGeolocation } from "@/features/map/useGeolocation";
 import type { Ride } from "@/types";
 import { getActiveRide, listRideHistory, requestRide } from "./rideApi";
 import { RideListItem } from "./RideListItem";
+import { SavedPlacesBar } from "@/features/places/SavedPlacesBar";
 
 type PinTarget = "pickup" | "dropoff" | null;
 
@@ -206,6 +207,7 @@ export function CustomerHome() {
               </div>
             }
           />
+          <SavedPlacesBar onPick={setDropoff} current={dropoff} />
         </div>
 
         {pickup && dropoff && (

@@ -32,14 +32,23 @@ async function send(to: string, subject: string, html: string, text: string) {
   }
 }
 
-export function sendOtpEmail(to: string, code: string, minutes: number) {
+export type CodePurpose = "login" | "signup" | "reset";
+
+const codeCopy: Record<CodePurpose, { title: string; intro: string; subject: (c: string) => string }> = {
+  login: { title: "Your sign-in code", intro: "Use this code to sign in.", subject: (c) => `${c} is your ${env.appName} sign-in code` },
+  signup: { title: "Confirm your email", intro: "Welcome to RideLink. Use this code to confirm your email and finish creating your account.", subject: (c) => `${c} is your ${env.appName} verification code` },
+  reset: { title: "Reset your password", intro: "Use this code to set a new password.", subject: (c) => `${c} is your ${env.appName} password reset code` },
+};
+
+export function sendCodeEmail(to: string, code: string, minutes: number, purpose: CodePurpose) {
+  const copy = codeCopy[purpose];
   const html = layout(
-    "Your sign-in code",
-    `Use this code to sign in. It expires in ${minutes} minutes.
+    copy.title,
+    `${copy.intro} It expires in ${minutes} minutes.
      <div style="margin:24px 0;font-size:34px;letter-spacing:10px;font-weight:700;color:#ffffff;background:#0b0b0b;border:1px solid #262626;border-radius:14px;padding:18px;text-align:center">${code}</div>
-     If you did not request this, you can ignore this email.`,
+     If you did not request this, you can ignore this email${purpose === "reset" ? "; your password will not change" : ""}.`,
   );
-  return send(to, `${code} is your ${env.appName} code`, html, `Your ${env.appName} sign-in code is ${code}. It expires in ${minutes} minutes.`);
+  return send(to, copy.subject(code), html, `${copy.intro} Your code is ${code}. It expires in ${minutes} minutes.`);
 }
 
 export function sendRideUpdateEmail(to: string, opts: { title: string; message: string; rideId: string }) {

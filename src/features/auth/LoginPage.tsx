@@ -1,197 +1,238 @@
-import { useEffect, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from "react";
-import { Navigate, useLocation } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Mail } from "lucide-react";
-import { api, ApiError } from "@/lib/api";
-import { supabase, supabaseConfigured } from "@/lib/supabase";
-import { useAuth } from "@/providers/AuthProvider";
+import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
+import { ArrowLeft, ArrowRight, KeyRound, Mail, MailCheck } from "lucide-react";
+import { api } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/lib/cn";
+import { AuthHeading, AuthShell } from "./components/AuthShell";
+import { CodeInput } from "./components/CodeInput";
+import { PasswordField } from "./components/PasswordField";
+import { AuthRedirect } from "./useAuthRedirect";
+import { useCooldown, waitSeconds } from "./useCooldown";
 
-const LENGTH = 6;
+type Mode = "password" | "code";
+type Step = "form" | "code" | "verify-email";
 
 export function LoginPage() {
-  const { session, loading } = useAuth();
-  const location = useLocation();
-  const [step, setStep] = useState<"email" | "code">("email");
+  const [mode, setMode] = useState<Mode>("password");
+  const [step, setStep] = useState<Step>("form");
   const [email, setEmail] = useState("");
-  const [digits, setDigits] = useState<string[]>(Array(LENGTH).fill(""));
+  const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
-  const inputs = useRef<Array<HTMLInputElement | null>>([]);
+  const [cooldown, setCooldown] = useCooldown();
 
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const t = window.setTimeout(() => setCooldown((c) => c - 1), 1000);
-    return () => window.clearTimeout(t);
-  }, [cooldown]);
-
-  if (!loading && session) {
-    const from = (location.state as { from?: string } | null)?.from;
-    return <Navigate to={from && from !== "/login" ? from : "/app"} replace />;
-  }
-
-  const sendCode = async (e?: FormEvent) => {
-    e?.preventDefault();
+  const run = async (fn: () => Promise<void>) => {
     setError(null);
     setBusy(true);
     try {
-      const res = await api.requestOtp(email);
-      setStep("code");
-      setDigits(Array(LENGTH).fill(""));
-      setCooldown(res.resendAfterSeconds);
-      window.setTimeout(() => inputs.current[0]?.focus(), 50);
+      await fn();
     } catch (err) {
-      setError((err as Error).message);
-      const m = (err as ApiError).message?.match(/wait (\d+)s/);
-      if (m) {
-        setCooldown(Number(m[1]));
+      const message = (err as Error).message;
+      setError(message);
+      const wait = waitSeconds(message);
+      if (wait) setCooldown(wait);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const loginWithPassword = (e: FormEvent) => {
+    e.preventDefault();
+    void run(async () => {
+      const { error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (!authError) return;
+      if (/not confirmed/i.test(authError.message)) {
+        setCode("");
+        setStep("verify-email");
+        try {
+          const res = await api.resendVerification(email.trim());
+          setCooldown(res.resendAfterSeconds);
+        } catch (err) {
+          // A code was sent moments ago (cooldown): the one already in their inbox still works.
+          const wait = waitSeconds((err as Error).message);
+          if (!wait) throw err;
+          setCooldown(wait);
+        }
+        return;
+      }
+      throw new Error(/invalid login credentials/i.test(authError.message) ? "Email or password is incorrect." : authError.message);
+    });
+  };
+
+  const sendLoginCode = (e?: FormEvent) => {
+    e?.preventDefault();
+    void run(async () => {
+      try {
+        const res = await api.requestOtp(email.trim());
+        setCooldown(res.resendAfterSeconds);
+      } finally {
+        setCode("");
         setStep("code");
       }
-    } finally {
-      setBusy(false);
-    }
+    });
   };
 
-  const verify = async (code: string) => {
-    setError(null);
-    setBusy(true);
-    try {
-      const { tokenHash } = await api.verifyOtp(email, code);
-      const { error: authError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "email" });
-      if (authError) throw authError;
-      // AuthProvider picks up the session and the redirect above takes over.
-    } catch (err) {
-      setError((err as Error).message);
-      setDigits(Array(LENGTH).fill(""));
-      inputs.current[0]?.focus();
-    } finally {
-      setBusy(false);
-    }
-  };
+  const verifyLoginCode = (value: string) =>
+    run(async () => {
+      try {
+        const { tokenHash } = await api.verifyOtp(email.trim(), value);
+        const { error: authError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "email" });
+        if (authError) throw authError;
+      } catch (err) {
+        setCode("");
+        throw err;
+      }
+    });
 
-  const setDigit = (i: number, value: string) => {
-    const v = value.replace(/\D/g, "").slice(-1);
-    const next = digits.slice();
-    next[i] = v;
-    setDigits(next);
-    if (v && i < LENGTH - 1) inputs.current[i + 1]?.focus();
-    if (next.every(Boolean)) void verify(next.join(""));
-  };
+  const verifyEmail = (value: string) =>
+    run(async () => {
+      try {
+        await api.verifySignup(email.trim(), value);
+        const { error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        if (authError) throw authError;
+      } catch (err) {
+        setCode("");
+        throw err;
+      }
+    });
 
-  const onKey = (i: number, e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Backspace" && !digits[i] && i > 0) inputs.current[i - 1]?.focus();
-    if (e.key === "ArrowLeft" && i > 0) inputs.current[i - 1]?.focus();
-    if (e.key === "ArrowRight" && i < LENGTH - 1) inputs.current[i + 1]?.focus();
-  };
+  const resend = () =>
+    run(async () => {
+      const res = step === "verify-email" ? await api.resendVerification(email.trim()) : await api.requestOtp(email.trim());
+      setCooldown(res.resendAfterSeconds);
+    });
 
-  const onPaste = (e: ClipboardEvent<HTMLInputElement>) => {
-    const text = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, LENGTH);
-    if (!text) return;
-    e.preventDefault();
-    const next = Array.from({ length: LENGTH }, (_, i) => text[i] ?? "");
-    setDigits(next);
-    inputs.current[Math.min(text.length, LENGTH - 1)]?.focus();
-    if (text.length === LENGTH) void verify(text);
-  };
+  if (step !== "form") {
+    const verifying = step === "verify-email";
+    return (
+      <AuthShell>
+        <AuthRedirect />
+        <button
+          onClick={() => {
+            setStep("form");
+            setError(null);
+          }}
+          className="mb-5 inline-flex items-center gap-1.5 text-sm text-muted hover:text-fg"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back
+        </button>
+        <AuthHeading
+          title={verifying ? "Confirm your email" : "Check your inbox"}
+          sub={
+            <>
+              {verifying ? "Your email is not confirmed yet. " : ""}We sent a 6-digit code to{" "}
+              <span className="font-medium text-fg">{email}</span>. It expires in 10 minutes.
+            </>
+          }
+        />
+        <div className="space-y-5">
+          <CodeInput
+            value={code}
+            onChange={setCode}
+            onComplete={verifying ? verifyEmail : verifyLoginCode}
+            disabled={busy}
+            invalid={Boolean(error)}
+          />
+          {error && <p className="text-sm text-danger">{error}</p>}
+          <Button
+            size="lg"
+            block
+            loading={busy}
+            disabled={code.length < 6}
+            onClick={() => (verifying ? verifyEmail(code) : verifyLoginCode(code))}
+          >
+            {verifying ? "Confirm and log in" : "Verify and continue"}
+          </Button>
+          <p className="text-center text-sm text-muted">
+            Did not get it?{" "}
+            <button disabled={cooldown > 0 || busy} onClick={resend} className="font-semibold text-fg hover:text-gold disabled:text-subtle">
+              {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
+            </button>
+          </p>
+        </div>
+      </AuthShell>
+    );
+  }
 
   return (
-    <div className="relative flex min-h-full flex-col bg-grid">
-      <div className="glow-gold pointer-events-none absolute inset-0" />
-      <header className="relative mx-auto flex w-full max-w-6xl items-center px-5 py-5 sm:px-8">
-        <Logo />
-      </header>
-      <main className="relative flex flex-1 items-center justify-center px-5 pb-16">
-        <div className="w-full max-w-md">
-          {!supabaseConfigured && (
-            <div className="mb-6 rounded-2xl border border-danger/40 bg-danger/10 p-4 text-sm text-danger">
-              Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment.
-            </div>
-          )}
-          <div className="rounded-[2rem] border border-line bg-surface/80 p-7 shadow-2xl backdrop-blur sm:p-9">
-            {step === "email" ? (
-              <form onSubmit={sendCode} className="space-y-6">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gold">Sign in</p>
-                  <h1 className="mt-2 font-display text-3xl font-bold tracking-tight">
-                    Welcome <span className="font-serif font-normal italic text-gold">aboard</span>
-                  </h1>
-                  <p className="mt-2 text-sm text-muted">Enter your email and we will send you a 6 digit code. No password needed.</p>
-                </div>
-                <Input
-                  type="email"
-                  name="email"
-                  autoComplete="email"
-                  autoFocus
-                  required
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  leading={<Mail className="h-4 w-4" />}
-                  error={error}
-                />
-                <Button type="submit" size="lg" block loading={busy} icon={!busy && <ArrowRight className="h-5 w-5" />}>
-                  Send code
-                </Button>
-              </form>
-            ) : (
-              <div className="space-y-6">
-                <button
-                  onClick={() => {
-                    setStep("email");
-                    setError(null);
-                  }}
-                  className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-fg"
-                >
-                  <ArrowLeft className="h-4 w-4" /> Change email
-                </button>
-                <div>
-                  <h1 className="font-display text-3xl font-bold tracking-tight">Check your inbox</h1>
-                  <p className="mt-2 text-sm text-muted">
-                    We sent a code to <span className="font-medium text-fg">{email}</span>. It expires in 10 minutes.
-                  </p>
-                </div>
-                <div className="flex justify-between gap-2">
-                  {digits.map((d, i) => (
-                    <input
-                      key={i}
-                      ref={(el) => {
-                        inputs.current[i] = el;
-                      }}
-                      value={d}
-                      inputMode="numeric"
-                      autoComplete={i === 0 ? "one-time-code" : "off"}
-                      maxLength={1}
-                      disabled={busy}
-                      onChange={(e) => setDigit(i, e.target.value)}
-                      onKeyDown={(e) => onKey(i, e)}
-                      onPaste={onPaste}
-                      aria-label={`Digit ${i + 1}`}
-                      className={cn(
-                        "h-14 w-full min-w-0 rounded-2xl border bg-bg text-center font-display text-2xl font-bold transition focus:outline-none focus:ring-4 focus:ring-gold/15",
-                        d ? "border-gold/60" : "border-line",
-                        error && "border-danger/60",
-                      )}
-                    />
-                  ))}
-                </div>
-                {error && <p className="text-sm text-danger">{error}</p>}
-                <Button size="lg" block loading={busy} disabled={digits.some((d) => !d)} onClick={() => verify(digits.join(""))}>
-                  Verify and continue
-                </Button>
-                <p className="text-center text-sm text-muted">
-                  Did not get it?{" "}
-                  <button disabled={cooldown > 0 || busy} onClick={() => sendCode()} className="font-semibold text-fg hover:text-gold disabled:text-subtle">
-                    {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
-                  </button>
-                </p>
-              </div>
+    <AuthShell
+      footer={
+        <>
+          New to RideLink?{" "}
+          <Link to="/signup" className="font-semibold text-fg hover:text-gold">
+            Create an account
+          </Link>
+        </>
+      }
+    >
+      <AuthRedirect />
+      <AuthHeading eyebrow="Log in" title="Welcome" accent="back" sub="Log in to book a ride or start driving." />
+
+      <div className="mb-6 grid grid-cols-2 rounded-full border border-line bg-bg/60 p-1">
+        {(
+          [
+            ["password", "Password", KeyRound],
+            ["code", "Email code", MailCheck],
+          ] as const
+        ).map(([key, label, Icon]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => {
+              setMode(key);
+              setError(null);
+            }}
+            className={cn(
+              "flex items-center justify-center gap-2 rounded-full py-2 text-sm font-medium transition",
+              mode === key ? "bg-fg text-bg" : "text-muted hover:text-fg",
             )}
+          >
+            <Icon className="h-4 w-4" /> {label}
+          </button>
+        ))}
+      </div>
+
+      <form onSubmit={mode === "password" ? loginWithPassword : sendLoginCode} className="space-y-4">
+        <Input
+          type="email"
+          name="email"
+          label="Email"
+          autoComplete="email"
+          autoFocus
+          required
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          leading={<Mail className="h-4 w-4" />}
+        />
+        {mode === "password" && (
+          <div>
+            <PasswordField
+              name="password"
+              label="Password"
+              autoComplete="current-password"
+              required
+              placeholder="Your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <div className="mt-2 text-right">
+              <Link to="/forgot-password" state={{ email }} className="text-sm font-medium text-muted hover:text-gold">
+                Forgot password?
+              </Link>
+            </div>
           </div>
-        </div>
-      </main>
-    </div>
+        )}
+        {mode === "code" && <p className="text-sm text-muted">We will email you a 6-digit code. No password needed.</p>}
+        {error && <p className="text-sm text-danger">{error}</p>}
+        <Button type="submit" size="lg" block loading={busy} icon={!busy && <ArrowRight className="h-5 w-5" />}>
+          {mode === "password" ? "Log in" : "Send code"}
+        </Button>
+      </form>
+    </AuthShell>
   );
 }

@@ -14,6 +14,7 @@ export interface Profile {
   vehicle_model: string | null;
   vehicle_color: string | null;
   plate_number: string | null;
+  avatar_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -94,5 +95,15 @@ export interface MessageTemplate {
   audio_path: string | null;
   audio_duration_ms: number | null;
   sort_order: number;
+  created_at: string;
+}
+
+export interface SavedPlace {
+  id: string;
+  user_id: string;
+  label: string;
+  address: string;
+  lat: number;
+  lng: number;
   created_at: string;
 }

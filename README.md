@@ -8,16 +8,17 @@ A modular ride-hailing app for customers and drivers, without a payment gateway 
 
 | Area | What it does |
 | --- | --- |
-| Sign in | Passwordless email OTP sent via Resend. Codes are HMAC-hashed, expire in 10 min, single use, max 5 attempts, 60 s resend cooldown, 5 sends per hour. A verified code is exchanged for a normal Supabase session. |
+| Accounts | Sign up with name, email and password (email confirmed with a 6-digit code), log in with a password or an emailed code, and reset a forgotten password with a code. All codes go through Resend; they are HMAC-hashed per purpose, expire in 10 min, are single use, allow 5 attempts, a 60 s resend cooldown and 5 sends per hour. Password reset answers the same whether or not the email exists. |
 | Roles | Customer or driver, chosen once at onboarding. Drivers add vehicle and plate. |
-| Booking | Pickup from GPS, address search or a tap on the map. Route preview with distance and time. Optional note for the driver. |
+| Booking | Pickup from GPS, address search or a tap on the map. Route preview with distance and time. Optional note for the driver. Saved places (Home, Work, ...) for one-tap drop-off. |
+| Map | Street map (OpenStreetMap) or satellite imagery (Esri) with road and place labels, zoom and recentre controls; the choice is remembered per device. |
 | Driver alerts | Online/offline toggle. New requests within 15 km open a popup with a 30 s countdown, a chime, vibration and a system notification when the tab is in the background. An open-requests list is also shown. |
 | Live trip | Status flow: requested, accepted, arrived, on trip, completed. Customer sees the driver's car move on the map with a live ETA. Driver gets a one-tap Google Maps navigation link. |
 | Messaging | Per-ride chat with read receipts, voice notes (record, preview, send), and one-tap quick replies. |
 | Templates | Users create their own text templates and record reusable voice-note templates. Built-in quick replies ship per role. |
 | Popups | In-app toasts for new messages and ride status changes anywhere in the app, plus browser notifications. |
 | Email | Customer gets an email when a driver accepts, arrives and completes. |
-| Other | Cancel with reasons (a driver cancelling puts the ride back in the pool), rating and feedback, trip history with filters, profile editing, light and dark themes, mobile layout with bottom navigation. |
+| Other | Profile photos, change password, installable app (add to home screen), error screen with reload, cancel with reasons (a driver cancelling puts the ride back in the pool), rating and feedback, trip history with filters, profile editing, light and dark themes, mobile layout with bottom navigation. |
 
 All numbers shown in the app (trip counts, distances, times) come from the database or routing service. There is no seeded or placeholder data apart from the built-in quick-reply templates.
 
@@ -54,7 +55,7 @@ Every table has row level security. Clients cannot update rides directly; all st
 
 ### 1. Supabase
 1. Create a project at supabase.com.
-2. Open **SQL Editor** and run `supabase/migrations/0001_init.sql`, then `0002_harden_function_grants.sql`. It creates the tables, policies, functions, the private `voice-notes` bucket and enables realtime on `rides`, `messages` and `driver_status`.
+2. Open **SQL Editor** and run the files in `supabase/migrations/` in order (`0001`, `0002`, `0003`). It creates the tables, policies, functions, the private `voice-notes` bucket and enables realtime on `rides`, `messages` and `driver_status`.
 3. Copy the project URL, `anon` key and `service_role` key from **Project Settings > API**.
 
 You do not need to configure Supabase email templates: codes are sent by this app through Resend.
@@ -90,11 +91,12 @@ Location, microphone and notifications need `localhost` or HTTPS. To test both r
 | `APP_URL` | server | Public app URL, used for email links and CORS |
 | `VITE_GEOCODE_COUNTRIES` | browser, optional | Limit address search, e.g. `ng` |
 | `VITE_NOMINATIM_URL`, `VITE_OSRM_URL` | browser, optional | Self-hosted geocoding / routing |
-| `VITE_TILE_URL`, `VITE_TILE_URL_DARK`, `VITE_TILE_ATTRIBUTION` | browser, optional | Map tile provider (e.g. MapTiler or Stadia Maps with your key) |
+| `VITE_TILE_URL`, `VITE_TILE_URL_DARK`, `VITE_TILE_ATTRIBUTION` | browser, optional | Street map tile provider (e.g. MapTiler or Stadia Maps with your key) |
+| `VITE_SATELLITE_URL`, `VITE_SATELLITE_ATTRIBUTION` | browser, optional | Satellite imagery provider (default: Esri World Imagery) |
 
 ## Maps and routing in production
 
-Address search uses OpenStreetMap Nominatim, routing uses the public OSRM server, and map tiles come from OpenStreetMap (dark mode applies a colour filter). They are free and keyless, which is ideal for development and small pilots, but the public servers have fair-use limits (Nominatim allows about 1 request per second). For real traffic, point `VITE_NOMINATIM_URL` / `VITE_OSRM_URL` at your own instances or swap `src/lib/geo.ts` for a paid provider such as Mapbox or Google. If routing is unreachable the app falls back to straight-line distance instead of failing.
+Address search uses OpenStreetMap Nominatim, routing uses the public OSRM server, and map tiles come from OpenStreetMap (dark mode applies a colour filter). They are free and keyless, which is ideal for development and small pilots, but the public servers have fair-use limits (Nominatim allows about 1 request per second). For real traffic, point `VITE_NOMINATIM_URL` / `VITE_OSRM_URL` at your own instances or swap `src/lib/geo.ts` for a paid provider such as Mapbox or Google. If routing is unreachable the app falls back to straight-line distance instead of failing. Satellite imagery comes from Esri's public World Imagery service; for commercial traffic, create a free ArcGIS Location Platform key or point `VITE_SATELLITE_URL` at MapTiler satellite.
 
 ## Configuration
 

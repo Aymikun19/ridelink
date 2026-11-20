@@ -7,6 +7,8 @@ interface AuthState {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  /** True after the user pressed Log out (until the next sign-in) */
+  signedOutManually: boolean;
   refreshProfile: () => Promise<Profile | null>;
   updateProfile: (patch: Partial<Profile>) => Promise<Profile>;
   signOut: () => Promise<void>;
@@ -18,6 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [signedOutManually, setSignedOutManually] = useState(false);
 
   const loadProfile = useCallback(async (userId: string) => {
     // The profile row is created by a database trigger; retry briefly on first sign-in.
@@ -46,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(next);
       if (event === "SIGNED_OUT") setProfile(null);
       if (event === "SIGNED_IN" && next) {
+        setSignedOutManually(false);
         setLoading(true);
         // Deferred to avoid running queries inside the auth callback.
         setTimeout(() => loadProfile(next.user.id).finally(() => setLoading(false)), 0);
@@ -75,12 +79,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
+    // A deliberate log-out starts fresh: no "return to where you were" on the next log-in.
+    setSignedOutManually(true);
     await supabase.auth.signOut();
   }, []);
 
   const value = useMemo(
-    () => ({ session, profile, loading, refreshProfile, updateProfile, signOut }),
-    [session, profile, loading, refreshProfile, updateProfile, signOut],
+    () => ({ session, profile, loading, signedOutManually, refreshProfile, updateProfile, signOut }),
+    [session, profile, loading, signedOutManually, refreshProfile, updateProfile, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
