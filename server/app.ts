@@ -2,6 +2,7 @@ import express, { type NextFunction, type Request, type Response } from "express
 import cors from "cors";
 import { authRouter } from "./routes/auth.js";
 import { notifyRouter } from "./routes/notify.js";
+import { placesRouter } from "./routes/places.js";
 import { HttpError } from "./lib/errors.js";
 
 export function createApp() {
@@ -17,6 +18,7 @@ export function createApp() {
   });
   app.use("/api/auth", authRouter);
   app.use("/api/notify", notifyRouter);
+  app.use("/api/places", placesRouter);
 
   app.use("/api", (_req, res) => {
     res.status(404).json({ error: "Not found" });

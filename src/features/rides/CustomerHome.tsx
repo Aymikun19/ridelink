@@ -162,6 +162,7 @@ export function CustomerHome() {
             value={pickup}
             onChange={setPickup}
             near={me}
+            onPickOnMap={() => setPinTarget("pickup")}
             placeholder="Pickup location"
             icon={<MapPin className="h-4 w-4" />}
             extra={
@@ -191,6 +192,7 @@ export function CustomerHome() {
             value={dropoff}
             onChange={setDropoff}
             near={pickup ?? me}
+            onPickOnMap={() => setPinTarget("dropoff")}
             placeholder="Where are you going?"
             icon={<Flag className="h-4 w-4 text-gold" />}
             extra={

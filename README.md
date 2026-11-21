@@ -94,14 +94,14 @@ Location, microphone and notifications need `localhost` or HTTPS. To test both r
 | `RESEND_FROM` | server | Sender, e.g. `RideLink <no-reply@yourdomain.com>` |
 | `OTP_SECRET` | server | Random secret for hashing codes (`openssl rand -hex 32`) |
 | `APP_URL` | server | Public app URL used in email links and allowed for CORS. Several origins can be listed with commas; the first is used in links. |
-| `VITE_GEOCODE_COUNTRIES` | browser, optional | Limit address search, e.g. `ng` |
-| `VITE_NOMINATIM_URL`, `VITE_OSRM_URL` | browser, optional | Self-hosted geocoding / routing |
+| `GOOGLE_MAPS_API_KEY` | server, optional | Adds Google Places to search, for businesses missing from OpenStreetMap. Needs the Places API (New) enabled |
+| `VITE_NOMINATIM_URL`, `VITE_PHOTON_URL`, `VITE_OSRM_URL` | browser, optional | Self-hosted geocoding / routing |
 | `VITE_TILE_URL`, `VITE_TILE_URL_DARK`, `VITE_TILE_ATTRIBUTION` | browser, optional | Street map tile provider (e.g. MapTiler or Stadia Maps with your key) |
 | `VITE_SATELLITE_URL`, `VITE_SATELLITE_ATTRIBUTION` | browser, optional | Satellite imagery provider (default: Esri World Imagery) |
 
 ## Maps and routing in production
 
-Address search uses OpenStreetMap Nominatim, routing uses the public OSRM server, and map tiles come from OpenStreetMap (dark mode applies a colour filter). They are free and keyless, which is ideal for development and small pilots, but the public servers have fair-use limits (Nominatim allows about 1 request per second). For real traffic, point `VITE_NOMINATIM_URL` / `VITE_OSRM_URL` at your own instances or swap `src/lib/geo.ts` for a paid provider such as Mapbox or Google. If routing is unreachable the app falls back to straight-line distance instead of failing. Satellite imagery comes from Esri's public World Imagery service; for commercial traffic, create a free ArcGIS Location Platform key or point `VITE_SATELLITE_URL` at MapTiler satellite.
+Address search works worldwide. It combines OpenStreetMap's Photon and Nominatim geocoders, biased toward the user's position, and adds Google Places when `GOOGLE_MAPS_API_KEY` is set (through `/api/places`, so the key never reaches the browser). Many local businesses are only on Google, so set the key if riders need to find shops, schools and churches by name. Users can also paste coordinates or a Google Maps link, or set a point on the map. Routing uses the public OSRM server, and map tiles come from OpenStreetMap (dark mode applies a colour filter). They are free and keyless, which is ideal for development and small pilots, but the public servers have fair-use limits (Nominatim allows about 1 request per second). For real traffic, point `VITE_NOMINATIM_URL` / `VITE_OSRM_URL` at your own instances or swap `src/lib/geo.ts` for a paid provider such as Mapbox or Google. If routing is unreachable the app falls back to straight-line distance instead of failing. Satellite imagery comes from Esri's public World Imagery service; for commercial traffic, create a free ArcGIS Location Platform key or point `VITE_SATELLITE_URL` at MapTiler satellite.
 
 ## Configuration
 
