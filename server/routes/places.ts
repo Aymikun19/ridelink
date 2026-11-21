@@ -25,8 +25,42 @@ function limit(userId: string) {
   hits.set(userId, recent);
 }
 
-placesRouter.get("/status", (_req, res) => {
-  res.json({ google: Boolean(key()) });
+/*
+ * GET /status reports whether Google search is configured. With ?check=1 it also makes one real
+ * request so a bad key, a disabled API or missing billing shows up clearly. The check result is
+ * cached for 10 minutes so the endpoint cannot be used to run up the bill.
+ */
+let lastCheck: { at: number; result: { ok: boolean; status?: number; reason?: string } } | null = null;
+
+async function checkGoogle() {
+  if (lastCheck && Date.now() - lastCheck.at < 10 * 60_000) return lastCheck.result;
+  let result: { ok: boolean; status?: number; reason?: string };
+  try {
+    const r = await fetch(`${GOOGLE}/places:autocomplete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Goog-Api-Key": key() },
+      body: JSON.stringify({ input: "Osogbo" }),
+    });
+    if (r.ok) result = { ok: true, status: r.status };
+    else {
+      const body = (await r.json().catch(() => ({}))) as { error?: { status?: string; message?: string } };
+      result = { ok: false, status: r.status, reason: body.error?.message?.slice(0, 300) ?? body.error?.status };
+    }
+  } catch {
+    result = { ok: false, reason: "Could not reach Google" };
+  }
+  lastCheck = { at: Date.now(), result };
+  return result;
+}
+
+placesRouter.get("/status", async (req, res, next) => {
+  try {
+    const google = Boolean(key());
+    if (google && req.query.check === "1") return res.json({ google, check: await checkGoogle() });
+    res.json({ google });
+  } catch (err) {
+    next(err);
+  }
 });
 
 const autocompleteSchema = z.object({
