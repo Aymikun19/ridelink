@@ -21,7 +21,7 @@ export const env = {
     return required("OTP_SECRET");
   },
   get appUrl() {
-    return (process.env.APP_URL || "http://localhost:5173").replace(/\/$/, "");
+    return (process.env.APP_URL || "http://localhost:5173").split(",")[0].trim().replace(/\/$/, "");
   },
   appName: "RideLink",
 };

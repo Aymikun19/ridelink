@@ -93,7 +93,7 @@ Location, microphone and notifications need `localhost` or HTTPS. To test both r
 | `RESEND_API_KEY` | server | Resend API key |
 | `RESEND_FROM` | server | Sender, e.g. `RideLink <no-reply@yourdomain.com>` |
 | `OTP_SECRET` | server | Random secret for hashing codes (`openssl rand -hex 32`) |
-| `APP_URL` | server | Public app URL, used for email links and CORS |
+| `APP_URL` | server | Public app URL used in email links and allowed for CORS. Several origins can be listed with commas; the first is used in links. |
 | `VITE_GEOCODE_COUNTRIES` | browser, optional | Limit address search, e.g. `ng` |
 | `VITE_NOMINATIM_URL`, `VITE_OSRM_URL` | browser, optional | Self-hosted geocoding / routing |
 | `VITE_TILE_URL`, `VITE_TILE_URL_DARK`, `VITE_TILE_ATTRIBUTION` | browser, optional | Street map tile provider (e.g. MapTiler or Stadia Maps with your key) |

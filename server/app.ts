@@ -7,7 +7,9 @@ import { HttpError } from "./lib/errors.js";
 export function createApp() {
   const app = express();
   app.disable("x-powered-by");
-  app.use(cors({ origin: process.env.APP_URL ? [process.env.APP_URL] : true }));
+  // APP_URL may list several origins separated by commas; the first one is used in email links.
+  const origins = (process.env.APP_URL ?? "").split(",").map((o) => o.trim().replace(/\/$/, "")).filter(Boolean);
+  app.use(cors({ origin: origins.length ? origins : true }));
   app.use(express.json({ limit: "32kb" }));
 
   app.get("/api/health", (_req, res) => {
