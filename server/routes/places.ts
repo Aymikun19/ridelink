@@ -33,7 +33,7 @@ function limit(userId: string) {
 let lastCheck: { at: number; result: { ok: boolean; status?: number; reason?: string } } | null = null;
 
 async function checkGoogle() {
-  if (lastCheck && Date.now() - lastCheck.at < 10 * 60_000) return lastCheck.result;
+  if (lastCheck && Date.now() - lastCheck.at < (lastCheck.result.ok ? 10 * 60_000 : 20_000)) return lastCheck.result;
   let result: { ok: boolean; status?: number; reason?: string };
   try {
     const r = await fetch(`${GOOGLE}/places:autocomplete`, {
